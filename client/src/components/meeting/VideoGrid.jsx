@@ -2,7 +2,7 @@ import { useSelector } from 'react-redux';
 import VideoTile from './VideoTile';
 
 export default function VideoGrid({ localStream, peerStreams, localUser, audioEnabled, videoEnabled, screenStream, remoteScreeners }) {
-  const { viewMode, speakerSocketId } = useSelector(s => s.meeting);
+  const { viewMode, speakerSocketId, participants } = useSelector(s => s.meeting);
   const peers = Object.entries(peerStreams || {});
 
   // Collect all tiles: screen share first, then local, then peers
@@ -12,7 +12,11 @@ export default function VideoGrid({ localStream, peerStreams, localUser, audioEn
   }
   allTiles.push({ id: '__local__', stream: localStream, name: localUser?.name || 'You', isLocal: true, isScreen: false, audio: audioEnabled, video: videoEnabled });
   peers.forEach(([socketId, { stream, name }]) => {
-    allTiles.push({ id: socketId, stream, name, isLocal: false, isScreen: remoteScreeners?.has(socketId), audio: true, video: true });
+    const pInfo = participants.find(p => p.socketId === socketId);
+    allTiles.push({ 
+      id: socketId, stream, name, isLocal: false, isScreen: remoteScreeners?.has(socketId), 
+      audio: pInfo?.audio !== false, video: pInfo?.video !== false 
+    });
   });
 
   const total = allTiles.length;

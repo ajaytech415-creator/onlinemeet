@@ -1,4 +1,4 @@
-﻿/* ─── Google Font ──────────────────────────────────────────────────────────── */
+/* ─── Google Font ──────────────────────────────────────────────────────────── */
 body, * {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
@@ -424,4 +424,104 @@ body {
 .kick-btn:hover {
   background: rgba(255,74,106,0.15);
 }
+
+/* ─── Responsive: Tablet (768px) ─────────────────────────────────────────────  */
+@media (max-width: 900px) {
+  .side-panel {
+    width: 280px;
+  }
+  .meeting-header {
+    padding: 0 12px;
+  }
+}
+
+/* ─── Responsive: Mobile (< 640px) ───────────────────────────────────────────  */
+@media (max-width: 640px) {
+  /* meeting layout grows its control row */
+  .meeting-layout {
+    grid-template-rows: 52px 1fr auto;
+  }
+
+  /* header: compress */
+  .meeting-header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  /* hide labels on header buttons, only keep icons */
+  .meeting-header span[class] { display: none; }
+
+  /* ─ Control bar: stacks neatly in 2 rows on small screens ─ */
+  .control-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 6px;
+    min-height: 0;
+    height: auto;
+  }
+  .control-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* slightly smaller buttons on mobile */
+  .ctrl-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+  }
+  .ctrl-btn span {
+    font-size: 8px;
+  }
+
+  /* danger (End/Leave) button stays compact */
+  .ctrl-btn[style*="gradient"] {
+    width: 70px;
+    height: 40px;
+  }
+
+  /* ─ Side panel: full-width overlay on mobile ─ */
+  .side-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 52px;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 200;
+    border-left: none;
+    border-top: 1px solid var(--border-light);
+  }
+
+  /* ─ Video grid gaps ─ */
+  .video-grid {
+    padding: 4px;
+    gap: 4px;
+  }
+
+  /* ─ Tile name badge: smaller ─ */
+  .tile-name {
+    font-size: 10px;
+    padding: 3px 7px;
+    max-width: 120px;
+  }
+
+  /* ─ Request popups: full-width on mobile ─ */
+  .request-popup {
+    min-width: unset;
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+  }
+
+  /* ─ Lobby page ─ */
+  .lobby-video {
+    border-radius: var(--radius);
+  }
+}
+
 
