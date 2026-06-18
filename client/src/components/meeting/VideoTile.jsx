@@ -55,9 +55,61 @@ export default function VideoTile({ stream, name, isLocal, audioEnabled = true, 
         )}
       </div>
 
+      {/* Screen share overlay controls */}
+      {showVideo && isScreenShare && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.4)', opacity: 0, transition: 'opacity 0.2s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 10
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+        >
+          <button
+            onClick={() => {
+              if (videoRef.current) {
+                if (document.fullscreenElement) {
+                  document.exitFullscreen().catch(()=>{});
+                } else {
+                  videoRef.current.parentElement.requestFullscreen().catch(()=>{});
+                }
+              }
+            }}
+            style={{
+              background: 'rgba(124,58,237,0.85)', color: 'white', border: 'none',
+              padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
+              fontWeight: '600', fontSize: '13px', backdropFilter: 'blur(4px)',
+              pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '8px'
+            }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+            Full Screen
+          </button>
+          
+          <button
+            onClick={() => {
+              if (videoRef.current && document.pictureInPictureEnabled) {
+                if (document.pictureInPictureElement) {
+                  document.exitPictureInPicture().catch(()=>{});
+                } else {
+                  videoRef.current.requestPictureInPicture().catch(()=>{});
+                }
+              }
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)',
+              padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
+              fontWeight: '600', fontSize: '13px', backdropFilter: 'blur(4px)',
+              pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '8px'
+            }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><rect x="8" y="21" width="8" height="0"/><path d="M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
+            Split Screen Options
+          </button>
+        </div>
+      )}
+
       {/* Screen share label */}
       {isScreenShare && (
-        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(124,58,237,0.9)', color: 'white', fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '5px', zIndex: 2 }}>
+        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(124,58,237,0.9)', color: 'white', fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '5px', zIndex: 11 }}>
           Screen
         </div>
       )}
