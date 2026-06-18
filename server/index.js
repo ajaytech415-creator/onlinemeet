@@ -12,10 +12,13 @@ import jwt from 'jsonwebtoken';
 import initSocket, { rooms } from './socket/index.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'edumeet_secret_key_2024';
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+let CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+if (CLIENT_URL.endsWith('/')) CLIENT_URL = CLIENT_URL.slice(0, -1);
+
 
 // ─── Hardcoded Users ─────────────────────────────────────────────────────────
 const USERS = {
