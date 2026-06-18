@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { playJoinSound, playHandSound } from '../utils/sounds';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { connectSocket, getSocket, disconnectSocket } from '../services/socket';
@@ -132,11 +133,12 @@ export default function Meeting() {
         // The joining peer will send us an offer; we just wait
       });
 
-      // Staff sees join requests in Waiting panel + toast
+      // Staff sees join requests in Waiting panel + toast + sound
       socket.on('join-request', ({ socketId, name }) => {
         if (!mounted) return;
         dispatch(addToWaiting({ socketId, name }));
         setJoinRequests(prev => [...prev, { socketId, name, id: Date.now() }]);
+        if (isStaff) playJoinSound();
       });
 
       // A participant left — inform peers and clean up
@@ -178,7 +180,7 @@ export default function Meeting() {
       socket.on('new-message', (msg) => { if (mounted) dispatch(addMessage(msg)); });
 
       // ── Raised hand ───────────────────────────────────────────────────
-      socket.on('hand-raised', (data) => { if (mounted) dispatch(addRaisedHand(data)); });
+      socket.on('hand-raised', (data) => { if (mounted) { dispatch(addRaisedHand(data)); if (isStaff) playHandSound(); } });
 
       // ── Peer media state (fixes remote mic/cam indicator bug) ─────────
       socket.on('peer-media-state', ({ socketId, audio, video }) => {
@@ -423,40 +425,38 @@ export default function Meeting() {
 
   // ── Main meeting UI ───────────────────────────────────────────────────
   return (
-    <div className="meeting-layout" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+    <div className="meeting-layout">
 
       {/* ── Header ── */}
       <div className="meeting-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="meeting-header-left">
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', flexShrink: 0 }}>
             <div style={{ width: '28px', height: '28px', borderRadius: '7px', background: 'linear-gradient(135deg, #7C3AED, #A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.362a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
             </div>
             <span style={{ fontWeight: '800', fontSize: '14px' }}>EduMeet</span>
           </div>
 
-          <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
+          <div style={{ width: '1px', height: '20px', background: 'var(--border)', flexShrink: 0 }} />
 
           {/* Room code + LIVE badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {displayRoomId && displayRoomId !== 'new' && (
-              <div style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: '8px', padding: '4px 10px' }}>
-                <span style={{ color: 'var(--secondary)', fontSize: '13px', fontWeight: '700', letterSpacing: '2px' }}>{displayRoomId}</span>
-              </div>
-            )}
-            {status === 'live' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,74,106,0.15)', border: '1px solid rgba(255,74,106,0.3)', borderRadius: '6px', padding: '3px 8px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--red)', animation: 'blink 1.5s infinite' }} />
-                <span style={{ color: 'var(--red)', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Live</span>
-              </div>
-            )}
-          </div>
+          {displayRoomId && displayRoomId !== 'new' && (
+            <div className="room-code-badge">
+              {displayRoomId}
+            </div>
+          )}
+          {status === 'live' && (
+            <div className="live-badge">
+              <div className="live-dot" />
+              <span className="live-label">Live</span>
+            </div>
+          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="meeting-header-right">
           {/* Timer */}
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: '600', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px' }}>
+          <div className="timer-badge">
             {fmt(elapsed)}
           </div>
 
@@ -468,32 +468,32 @@ export default function Meeting() {
                 display: 'flex', alignItems: 'center', gap: '6px',
                 background: linkCopied ? 'rgba(0,214,143,0.15)' : 'rgba(124,58,237,0.15)',
                 border: `1px solid ${linkCopied ? 'rgba(0,214,143,0.3)' : 'var(--border)'}`,
-                borderRadius: '8px', padding: '6px 14px',
+                borderRadius: '8px', padding: '6px 12px',
                 color: linkCopied ? 'var(--green)' : 'var(--secondary)',
                 cursor: 'pointer', fontSize: '13px', fontWeight: '600',
-                fontFamily: 'inherit', transition: 'all .2s',
+                fontFamily: 'inherit', transition: 'all .2s', flexShrink: 0
               }}
             >
               {linkCopied ? (
-                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!</>
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span className="share-btn-text">Copied!</span></>
               ) : (
-                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> Share Link</>
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> <span className="share-btn-text">Share</span></>
               )}
             </button>
           )}
 
           {/* User pill */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-light)', borderRadius: '99px', padding: '4px 12px 4px 6px' }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg,#7C3AED,#E879F9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-light)', borderRadius: '99px', padding: '4px 10px 4px 4px', flexShrink: 0 }}>
+            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'linear-gradient(135deg,#7C3AED,#E879F9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff' }}>
               {user?.name?.charAt(0)?.toUpperCase()}
             </div>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{user?.name}</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#fff', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</span>
           </div>
         </div>
       </div>
 
       {/* ── Main area: video + side panel ── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div className="meeting-main">
         <VideoGrid
           localStream={localStream}
           peerStreams={peerStreams}
