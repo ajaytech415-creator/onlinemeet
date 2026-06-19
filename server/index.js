@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import initSocket, { rooms } from './socket/index.js';
+import livekitRoutes from './routes/livekitRoutes.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -43,6 +44,8 @@ const loginLimiter = rateLimit({
 });
 
 // ─── REST Routes ─────────────────────────────────────────────────────────────
+app.use('/api/livekit', livekitRoutes);
+
 app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)

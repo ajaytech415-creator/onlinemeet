@@ -1,5 +1,4 @@
 import registerRoomHandlers from './handlers/roomHandlers.js';
-import registerWebRTCHandlers from './handlers/webrtcHandlers.js';
 import registerChatHandlers from './handlers/chatHandlers.js';
 import registerMediaHandlers from './handlers/mediaHandlers.js';
 
@@ -54,7 +53,6 @@ export default function initSocket(io) {
     console.log(`[+] ${user.name} (${user.role}) connected — ${socket.id}`);
 
     registerRoomHandlers(io, socket, shared);
-    registerWebRTCHandlers(io, socket);
     registerChatHandlers(io, socket);
     registerMediaHandlers(io, socket, shared);
 

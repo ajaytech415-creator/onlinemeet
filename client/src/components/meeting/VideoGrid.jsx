@@ -1,35 +1,52 @@
 import { useSelector } from 'react-redux';
+import { useTracks } from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import VideoTile from './VideoTile';
 
-export default function VideoGrid({ localStream, peerStreams, localUser, audioEnabled, videoEnabled, screenStream, remoteScreeners }) {
-  const { viewMode, speakerSocketId, participants } = useSelector(s => s.meeting);
-  const peers = Object.entries(peerStreams || {});
+export default function VideoGrid() {
+  const { viewMode, speakerSocketId } = useSelector(s => s.meeting);
 
-  // Collect all tiles: screen share first, then local, then peers
+  // Retrieve tracks directly from the LiveKit room context
+  const cameraTracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }]);
+  const screenTracks = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
+
   const allTiles = [];
-  if (screenStream) {
-    allTiles.push({ id: '__screen__', stream: screenStream, name: `${localUser?.name}'s Screen`, isLocal: true, isScreen: true, audio: true, video: true });
-  }
-  allTiles.push({ id: '__local__', stream: localStream, name: localUser?.name || 'You', isLocal: true, isScreen: false, audio: audioEnabled, video: videoEnabled });
-  peers.forEach(([socketId, { stream, name }]) => {
-    const pInfo = participants.find(p => p.socketId === socketId);
-    allTiles.push({ 
-      id: socketId, stream, name, isLocal: false, isScreen: remoteScreeners?.has(socketId), 
-      audio: pInfo?.audio !== false, video: pInfo?.video !== false 
+
+  // Add Screen shares first
+  screenTracks.forEach(t => {
+    allTiles.push({
+      id: t.participant.identity + '_screen',
+      trackRef: t,
+      name: `${t.participant.name || t.participant.identity}'s Screen`,
+      isLocal: t.participant.isLocal,
+      isScreen: true,
+      audio: false, 
+      video: true
+    });
+  });
+
+  // Add Camera streams (which handles audio mic badges internally via LiveKit, but we can pass state)
+  cameraTracks.forEach(t => {
+    allTiles.push({
+      id: t.participant.identity,
+      trackRef: t,
+      name: t.participant.name || t.participant.identity,
+      isLocal: t.participant.isLocal,
+      isScreen: false,
+      audio: t.participant.isMicrophoneEnabled,
+      video: t.participant.isCameraEnabled
     });
   });
 
   const total = allTiles.length;
+  if (total === 0) return <div style={{ flex: 1, background: '#030108' }} />;
 
-  // ── Speaker View ─────────────────────────────────────────────────────────────
-  // Active when: viewMode is 'speaker', OR there is any screen-sharing happening
-  const isSpeakerView = viewMode === 'speaker' || !!screenStream || (remoteScreeners?.size > 0);
+  const isSpeakerView = viewMode === 'speaker' || screenTracks.length > 0;
 
   if (isSpeakerView && total > 1) {
-    // Determine the main (spotlight) tile
     const mainId = speakerSocketId && allTiles.find(t => t.id === speakerSocketId)
       ? speakerSocketId
-      : (screenStream ? '__screen__' : (remoteScreeners?.size > 0 ? [...remoteScreeners][0] : allTiles[0].id));
+      : (screenTracks.length > 0 ? allTiles[0].id : allTiles[0].id);
 
     const mainTile = allTiles.find(t => t.id === mainId) || allTiles[0];
     const stripTiles = allTiles.filter(t => t.id !== mainTile.id);
@@ -39,7 +56,7 @@ export default function VideoGrid({ localStream, peerStreams, localUser, audioEn
         {/* Main tile */}
         <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           <VideoTile
-            stream={mainTile.stream}
+            trackRef={mainTile.trackRef}
             name={mainTile.name}
             isLocal={mainTile.isLocal}
             audioEnabled={mainTile.audio}
@@ -53,7 +70,7 @@ export default function VideoGrid({ localStream, peerStreams, localUser, audioEn
           {stripTiles.map(tile => (
             <div key={tile.id} style={{ height: '120px', flexShrink: 0 }}>
               <VideoTile
-                stream={tile.stream}
+                trackRef={tile.trackRef}
                 name={tile.name}
                 isLocal={tile.isLocal}
                 audioEnabled={tile.audio}
@@ -81,16 +98,9 @@ export default function VideoGrid({ localStream, peerStreams, localUser, audioEn
   return (
     <div style={{ flex: 1, display: 'grid', gap: '6px', padding: '8px', background: '#030108', overflow: 'hidden', minHeight: 0, ...getGridStyle() }}>
       {allTiles.map((tile, i) => (
-        <div
-          key={tile.id}
-          style={{
-            minHeight: 0,
-            // In a 3-tile layout, span first tile (screen share or local) across top
-            ...(total === 3 && i === 0 ? { gridColumn: '1 / -1' } : {}),
-          }}
-        >
+        <div key={tile.id} style={{ minHeight: 0, ...(total === 3 && i === 0 ? { gridColumn: '1 / -1' } : {}) }}>
           <VideoTile
-            stream={tile.stream}
+            trackRef={tile.trackRef}
             name={tile.name}
             isLocal={tile.isLocal}
             audioEnabled={tile.audio}

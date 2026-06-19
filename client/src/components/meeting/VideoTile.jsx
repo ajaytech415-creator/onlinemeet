@@ -1,35 +1,29 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { VideoTrack, AudioTrack } from '@livekit/components-react';
 
-export default function VideoTile({ stream, name, isLocal, audioEnabled = true, videoEnabled = true, isScreenShare = false }) {
-  const videoRef = useRef(null);
+export default function VideoTile({ trackRef, name, isLocal, audioEnabled = true, videoEnabled = true, isScreenShare = false }) {
+  const videoHolderRef = useRef(null);
   const letter = name?.charAt(0)?.toUpperCase() || '?';
-  const showVideo = stream && videoEnabled;
-
-  // Attach the stream srcObject whenever the stream changes OR when camera is toggled back on
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      // Always reassign srcObject so the video element re-renders its frame
-      videoRef.current.srcObject = stream;
-      // If track is enabled, ensure we play
-      if (videoEnabled) {
-        videoRef.current.play().catch(() => {});
-      }
-    }
-  }, [stream, videoEnabled]);
+  const showVideo = trackRef && videoEnabled;
 
   return (
-    <div className="video-tile" style={{ position: 'relative', background: '#0F0820', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Always keep the video element in the DOM so srcObject is never lost */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted={isLocal}
-        style={{
-          width: '100%', height: '100%', objectFit: 'cover', display: showVideo ? 'block' : 'none',
-          transform: isLocal && !isScreenShare ? 'scaleX(-1)' : 'none'
-        }}
-      />
+    <div className="video-tile" ref={videoHolderRef} style={{ position: 'relative', background: '#0F0820', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+      
+      {/* LiveKit component that manages standard WebRTC native video attaching perfectly */}
+      {showVideo && trackRef && (
+        <VideoTrack
+          trackRef={trackRef}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover',
+            transform: isLocal && !isScreenShare ? 'scaleX(-1)' : 'none'
+          }}
+        />
+      )}
+
+      {/* Attach Audio for remote participants. Local audio is captured automatically, but we don't want echo */}
+      {!isLocal && audioEnabled && trackRef && trackRef.participant && (
+         <AudioTrack trackRef={trackRef} />
+      )}
 
       {/* Avatar shown when camera is off */}
       {!showVideo && (
@@ -41,7 +35,6 @@ export default function VideoTile({ stream, name, isLocal, audioEnabled = true, 
         </div>
       )}
 
-      {/* Name + mic badge */}
       <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 2 }}>
         <div style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '6px', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
           {name}{isLocal ? ' (You)' : ''}
@@ -55,7 +48,6 @@ export default function VideoTile({ stream, name, isLocal, audioEnabled = true, 
         )}
       </div>
 
-      {/* Screen share overlay controls */}
       {showVideo && isScreenShare && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -67,12 +59,9 @@ export default function VideoTile({ stream, name, isLocal, audioEnabled = true, 
         >
           <button
             onClick={() => {
-              if (videoRef.current) {
-                if (document.fullscreenElement) {
-                  document.exitFullscreen().catch(()=>{});
-                } else {
-                  videoRef.current.parentElement.requestFullscreen().catch(()=>{});
-                }
+              if (videoHolderRef.current) {
+                if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+                else videoHolderRef.current.requestFullscreen().catch(()=>{});
               }
             }}
             style={{
@@ -84,30 +73,9 @@ export default function VideoTile({ stream, name, isLocal, audioEnabled = true, 
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
             Full Screen
           </button>
-          
-          <button
-            onClick={() => {
-              if (videoRef.current && document.pictureInPictureEnabled) {
-                if (document.pictureInPictureElement) {
-                  document.exitPictureInPicture().catch(()=>{});
-                } else {
-                  videoRef.current.requestPictureInPicture().catch(()=>{});
-                }
-              }
-            }}
-            style={{
-              background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)',
-              padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
-              fontWeight: '600', fontSize: '13px', backdropFilter: 'blur(4px)',
-              pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '8px'
-            }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><rect x="8" y="21" width="8" height="0"/><path d="M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/></svg>
-            Split Screen Options
-          </button>
         </div>
       )}
 
-      {/* Screen share label */}
       {isScreenShare && (
         <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(124,58,237,0.9)', color: 'white', fontSize: '11px', fontWeight: '700', padding: '3px 8px', borderRadius: '5px', zIndex: 11 }}>
           Screen
